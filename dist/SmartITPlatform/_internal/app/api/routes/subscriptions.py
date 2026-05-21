@@ -19,8 +19,8 @@ async def feature_decision(
     return await SubscriptionService(session).decision(user.organization_id, feature)
 
 
-@router.get("/trial/roi-report", response_model=ROIReport)
-async def trial_roi_report(
+@router.get("/roi-report", response_model=ROIReport)
+async def roi_report(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> ROIReport:
