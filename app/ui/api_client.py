@@ -70,7 +70,7 @@ class ApiClient:
             return response.json()
 
     def roi_report(self) -> dict:
-        return self._get("/api/subscriptions/trial/roi-report")
+        return self._get("/api/subscriptions/roi-report")
 
     def _get(self, path: str):
         with httpx.Client(base_url=self.session.base_url, timeout=15, headers=self.session.headers) as client:

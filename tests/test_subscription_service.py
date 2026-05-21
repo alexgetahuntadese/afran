@@ -23,3 +23,13 @@ def test_active_trial_is_not_expired() -> None:
         trial_ends_at=datetime.now(UTC) + timedelta(days=1),
     )
     assert service._is_expired(subscription) is False
+
+
+def test_professional_plan_ignores_trial_end_date() -> None:
+    service = SubscriptionService(session=None)  # type: ignore[arg-type]
+    subscription = Subscription(
+        plan_code=PlanCode.PROFESSIONAL,
+        status=SubscriptionStatus.ACTIVE,
+        trial_ends_at=datetime.now(UTC) - timedelta(days=1),
+    )
+    assert service._is_expired(subscription) is False

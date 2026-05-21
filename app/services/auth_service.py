@@ -1,10 +1,8 @@
-from datetime import UTC, datetime, timedelta
-
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
+from app.core.enums import PlanCode
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models import Branch, Organization, Role, Subscription, User
 from app.schemas.auth import TokenResponse, UserCreate
@@ -19,7 +17,6 @@ class AuthService:
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
-        settings = get_settings()
         organization = Organization(name=data.organization_name, industry="healthcare_office")
         role = Role(
             name=f"{data.organization_name}:owner",
@@ -48,13 +45,16 @@ class AuthService:
         )
         subscription = Subscription(
             organization_id=organization.id,
-            trial_ends_at=datetime.now(UTC) + timedelta(days=settings.trial_days),
-            device_limit=settings.trial_max_devices,
+            plan_code=PlanCode.PROFESSIONAL,
+            trial_ends_at=None,
+            device_limit=None,
             feature_flags={
+                "unlimited_devices": True,
+                "remote_support": True,
+                "advanced_monitoring": True,
+                "automation_scripts": True,
                 "cloud_sync": False,
-                "automation_scripts": False,
-                "remote_support_minutes": settings.trial_remote_session_minutes,
-                "label": "Trial Version",
+                "label": "Professional",
             },
         )
         self.session.add_all([branch, user, subscription])

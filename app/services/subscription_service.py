@@ -38,16 +38,15 @@ class SubscriptionService:
     async def decision(self, organization_id: UUID, feature: str) -> FeatureDecision:
         subscription = await self.repo.get_for_org(organization_id)
         if subscription is None:
-            return FeatureDecision(allowed=False, reason="No subscription found", plan_code=PlanCode.TRIAL)
+            return FeatureDecision(allowed=False, reason="No subscription found", plan_code=PlanCode.PROFESSIONAL)
 
         if self._is_expired(subscription):
             subscription.status = SubscriptionStatus.EXPIRED
             await self.session.flush()
             return FeatureDecision(
                 allowed=False,
-                reason="Trial or subscription expired. Upgrade to continue monitoring and remote support.",
+                reason="Subscription expired. Renew to continue monitoring and remote support.",
                 plan_code=subscription.plan_code,
-                trial_version_label="Trial Version" if subscription.plan_code == PlanCode.TRIAL else None,
             )
 
         if subscription.plan_code == PlanCode.TRIAL:
@@ -56,9 +55,8 @@ class SubscriptionService:
                 allowed = True
             return FeatureDecision(
                 allowed=allowed,
-                reason=None if allowed else "Feature is not available in Trial Version",
+                reason=None if allowed else "Feature is not available on this plan",
                 plan_code=subscription.plan_code,
-                trial_version_label="Trial Version",
             )
 
         flags = self.ENTERPRISE_FLAGS if subscription.plan_code == PlanCode.ENTERPRISE else self.PROFESSIONAL_FLAGS
@@ -77,7 +75,7 @@ class SubscriptionService:
         )
         count = int(result.scalar_one())
         if count >= subscription.device_limit:
-            raise PermissionError("Trial Version supports a maximum of 10 devices")
+            raise PermissionError(f"This plan supports a maximum of {subscription.device_limit} devices")
 
     async def remote_session_limit_seconds(self, organization_id: UUID) -> int | None:
         subscription = await self.repo.get_for_org(organization_id)
@@ -98,8 +96,8 @@ class SubscriptionService:
             offline_devices=offline_devices,
             network_issues_detected=network_issues,
             estimated_downtime_minutes_prevented=prevented,
-            headline="Your trial found measurable IT risk before it became downtime.",
-            upgrade_message="Upgrade to continue monitoring and remote support",
+            headline="Your workspace found measurable IT risk before it became downtime.",
+            upgrade_message="Keep monitoring and remote support active",
         )
 
     def _is_expired(self, subscription: Subscription) -> bool:
