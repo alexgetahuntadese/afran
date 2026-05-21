@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Smart Hospital & Office IT Management Platform"
     environment: str = "development"
-    secret_key: str = Field(default="change-me-in-production", min_length=16)
+    secret_key: str = Field(default="change-me-in-development-change-before-production", min_length=32)
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     database_url: str = "sqlite+aiosqlite:///./smart_it.db"
