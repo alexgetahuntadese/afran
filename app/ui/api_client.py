@@ -89,6 +89,21 @@ class ApiClient:
             response.raise_for_status()
             return response.json()
 
+    def remote_sessions(self) -> list[dict]:
+        return self._get("/api/remote-support/sessions")
+
+    def request_remote_session(self, device_id: str) -> dict:
+        with httpx.Client(base_url=self.session.base_url, timeout=30, headers=self.session.headers) as client:
+            response = client.post("/api/remote-support/sessions", json={"device_id": device_id})
+            response.raise_for_status()
+            return response.json()
+
+    def inventory_csv(self) -> bytes:
+        return self._download("/api/inventory/export.csv")
+
+    def inventory_pdf(self) -> bytes:
+        return self._download("/api/inventory/export.pdf")
+
     def roi_report(self) -> dict:
         return self._get("/api/subscriptions/roi-report")
 
@@ -97,3 +112,9 @@ class ApiClient:
             response = client.get(path)
             response.raise_for_status()
             return response.json()
+
+    def _download(self, path: str) -> bytes:
+        with httpx.Client(base_url=self.session.base_url, timeout=30, headers=self.session.headers) as client:
+            response = client.get(path)
+            response.raise_for_status()
+            return response.content
