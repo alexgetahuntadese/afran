@@ -1,29 +1,23 @@
 Starting embedded backend
 Traceback (most recent call last):
-  File "app\ui\backend_runner.py", line 35, in _run_backend
-    from app.main import app
-  File "pyimod02_importers.py", line 457, in exec_module
-  File "app\main.py", line 6, in <module>
-    from app.api.router import api_router
-  File "pyimod02_importers.py", line 457, in exec_module
-  File "app\api\router.py", line 3, in <module>
-    from app.api.routes import (
-    ...<13 lines>...
-    )
-  File "pyimod02_importers.py", line 457, in exec_module
-  File "app\api\routes\alerts.py", line 7, in <module>
-    from app.api.deps import get_current_user
-  File "pyimod02_importers.py", line 457, in exec_module
-  File "app\api\deps.py", line 10, in <module>
-    from app.core.security import decode_access_token
-  File "pyimod02_importers.py", line 457, in exec_module
-  File "app\core\security.py", line 9, in <module>
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-  File "passlib\context.py", line 1402, in __init__
-  File "passlib\context.py", line 1597, in load
-  File "passlib\context.py", line 635, in __init__
-  File "passlib\context.py", line 653, in _init_scheme_list
-  File "passlib\registry.py", line 352, in get_crypt_handler
-ModuleNotFoundError: No module named 'passlib.handlers.bcrypt'
+  File "logging\config.py", line 583, in configure
+  File "logging\config.py", line 693, in configure_formatter
+  File "logging\config.py", line 487, in configure_custom
+  File "uvicorn\logging.py", line 42, in __init__
+AttributeError: 'NoneType' object has no attribute 'isatty'
 
-Embedded backend did not become healthy before timeout
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "app\ui\backend_runner.py", line 38, in _run_backend
+    config = uvicorn.Config(
+        app,
+    ...<3 lines>...
+        access_log=False,
+    )
+  File "uvicorn\config.py", line 284, in __init__
+  File "uvicorn\config.py", line 379, in configure_logging
+  File "logging\config.py", line 946, in dictConfig
+  File "logging\config.py", line 586, in configure
+ValueError: Unable to configure formatter 'default'
+
