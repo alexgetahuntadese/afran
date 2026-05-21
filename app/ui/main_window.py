@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
+    QApplication,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -28,6 +31,10 @@ class MainWindow(QMainWindow):
         self.metrics: dict[str, MetricCard] = {}
         self.stack = QStackedWidget()
         self.current_branches: list[dict] = []
+        self.current_devices: list[dict] = []
+        self.current_printers: list[dict] = []
+        self.current_alerts: list[dict] = []
+        self.nav_buttons: list[QPushButton] = []
         self._build()
         self.refresh_timer = QTimer(self)
         self.refresh_timer.timeout.connect(self.refresh_data)
@@ -59,9 +66,15 @@ class MainWindow(QMainWindow):
             ("Dashboard", "Devices", "Printers", "Alerts", "Remote Support", "Inventory"), start=1
         ):
             button = QPushButton(label)
+            button.setObjectName("NavButton")
+            button.setCheckable(True)
             button.clicked.connect(lambda _, view_index=index: self.show_view(view_index))
+            self.nav_buttons.append(button)
             layout.addWidget(button)
+        self.status_label = QLabel("Not signed in")
+        self.status_label.setObjectName("Muted")
         layout.addStretch()
+        layout.addWidget(self.status_label)
         return sidebar
 
     def _login_view(self) -> QWidget:
@@ -122,11 +135,13 @@ class MainWindow(QMainWindow):
 
         self.device_table = QTableWidget(0, 6)
         self.device_table.setHorizontalHeaderLabels(["Hostname", "IP", "MAC", "Vendor", "Type", "Status"])
+        self._prepare_table(self.device_table)
         layout.addWidget(QLabel("Discovered Devices"))
         layout.addWidget(self.device_table, 1)
 
         self.alert_table = QTableWidget(0, 4)
         self.alert_table.setHorizontalHeaderLabels(["Severity", "Title", "Message", "Status"])
+        self._prepare_table(self.alert_table)
         layout.addWidget(QLabel("Alert Center"))
         layout.addWidget(self.alert_table, 1)
         return view
@@ -149,6 +164,7 @@ class MainWindow(QMainWindow):
         self.devices_page_table.setHorizontalHeaderLabels(
             ["Hostname", "IP", "MAC", "Vendor", "Type", "Status", "Department"]
         )
+        self._prepare_table(self.devices_page_table)
         layout.addWidget(header)
         layout.addLayout(actions)
         layout.addWidget(self.devices_page_table, 1)
@@ -172,6 +188,7 @@ class MainWindow(QMainWindow):
         self.printer_table.setHorizontalHeaderLabels(
             ["Name", "Model", "IP", "Status", "Health", "Queue", "Toner"]
         )
+        self._prepare_table(self.printer_table)
         layout.addWidget(header)
         layout.addLayout(actions)
         layout.addWidget(self.printer_table, 1)
@@ -187,6 +204,7 @@ class MainWindow(QMainWindow):
         refresh.clicked.connect(self.refresh_data)
         self.alerts_page_table = QTableWidget(0, 4)
         self.alerts_page_table.setHorizontalHeaderLabels(["Severity", "Title", "Message", "Status"])
+        self._prepare_table(self.alerts_page_table)
         layout.addWidget(header)
         layout.addWidget(refresh)
         layout.addWidget(self.alerts_page_table, 1)
@@ -198,11 +216,25 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(24, 24, 24, 24)
         header = QLabel("Remote Support")
         header.setStyleSheet("font-size: 26px; font-weight: 700;")
-        self.remote_status = QLabel("Select a device from the Devices page, then request support from the API.")
+        request = QPushButton("Request session for selected device")
+        request.clicked.connect(self.request_remote_support)
+        refresh = QPushButton("Refresh")
+        refresh.clicked.connect(self.refresh_data)
+        actions = QHBoxLayout()
+        actions.addWidget(request)
+        actions.addWidget(refresh)
+        actions.addStretch()
+        self.remote_status = QLabel("Select a device row, then request a support session.")
         self.remote_status.setObjectName("Muted")
+        self.remote_table = QTableWidget(0, 6)
+        self.remote_table.setHorizontalHeaderLabels(
+            ["Device", "Status", "Approved by", "Started", "Ended", "Max seconds"]
+        )
+        self._prepare_table(self.remote_table)
         layout.addWidget(header)
+        layout.addLayout(actions)
         layout.addWidget(self.remote_status)
-        layout.addStretch()
+        layout.addWidget(self.remote_table, 1)
         return view
 
     def _inventory_view(self) -> QWidget:
@@ -215,9 +247,18 @@ class MainWindow(QMainWindow):
         self.inventory_summary.setObjectName("Muted")
         refresh = QPushButton("Refresh summary")
         refresh.clicked.connect(self.refresh_data)
+        csv = QPushButton("Export CSV")
+        csv.clicked.connect(lambda: self.export_inventory("csv"))
+        pdf = QPushButton("Export PDF")
+        pdf.clicked.connect(lambda: self.export_inventory("pdf"))
+        actions = QHBoxLayout()
+        actions.addWidget(refresh)
+        actions.addWidget(csv)
+        actions.addWidget(pdf)
+        actions.addStretch()
         layout.addWidget(header)
         layout.addWidget(self.inventory_summary)
-        layout.addWidget(refresh)
+        layout.addLayout(actions)
         layout.addStretch()
         return view
 
@@ -225,6 +266,7 @@ class MainWindow(QMainWindow):
         try:
             self.api.login(self.email.text(), self.password.text())
             self._enter_app()
+            self._set_status("Signed in")
         except Exception as exc:
             QMessageBox.warning(self, "Sign in failed", str(exc))
 
@@ -232,6 +274,7 @@ class MainWindow(QMainWindow):
         try:
             self.api.demo()
             self._enter_app()
+            self._set_status("Demo workspace loaded")
         except Exception as exc:
             QMessageBox.warning(self, "Demo workspace failed", str(exc))
 
@@ -244,12 +287,15 @@ class MainWindow(QMainWindow):
                 self.password.text(),
             )
             self._enter_app()
+            self._set_status("Workspace created")
             self.auto_scan()
         except Exception as exc:
             QMessageBox.warning(self, "Workspace setup failed", str(exc))
 
     def show_view(self, index: int) -> None:
         self.stack.setCurrentIndex(index)
+        for button_index, button in enumerate(self.nav_buttons, start=1):
+            button.setChecked(button_index == index)
         if self.api.session.token:
             self.refresh_data()
 
@@ -260,14 +306,21 @@ class MainWindow(QMainWindow):
 
     def refresh_data(self) -> None:
         try:
+            self._set_status("Refreshing...")
+            QApplication.processEvents()
             summary = self.api.dashboard()
             devices = self.api.devices()
             alerts = self.api.alerts()
             printers = self.api.printers()
+            sessions = self.api.remote_sessions()
             self.current_branches = self.api.branches()
         except Exception as exc:
+            self._set_status("Backend unavailable")
             QMessageBox.warning(self, "Backend unavailable", str(exc))
             return
+        self.current_devices = devices
+        self.current_printers = printers
+        self.current_alerts = alerts
         for key, value in summary.items():
             if key in self.metrics:
                 self.metrics[key].set_value(value)
@@ -289,9 +342,16 @@ class MainWindow(QMainWindow):
             printers,
             ["name", "model", "ip_address", "status", "health_score", "queue_depth", "toner_level"],
         )
+        self._fill_table(
+            self.remote_table,
+            sessions,
+            ["device_id", "status", "approved_by_user", "started_at", "ended_at", "max_duration_seconds"],
+        )
+        self.remote_status.setText(f"{len(sessions)} remote support sessions")
         self.inventory_summary.setText(
             f"{len(devices)} devices, {len(printers)} printers, {len(alerts)} open alerts"
         )
+        self._set_status("Ready")
 
     def auto_scan(self) -> None:
         try:
@@ -323,10 +383,46 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.warning(self, "Spooler restart failed", str(exc))
 
+    def request_remote_support(self) -> None:
+        try:
+            if not self.current_devices:
+                QMessageBox.information(self, "No devices", "Load a workspace with devices first.")
+                return
+            row = self.devices_page_table.currentRow()
+            device = self.current_devices[row] if 0 <= row < len(self.current_devices) else self.current_devices[0]
+            session = self.api.request_remote_session(device["id"])
+            self._set_status(f"Remote session requested for {device.get('hostname') or device['ip_address']}")
+            QMessageBox.information(self, "Remote support", f"Session status: {session['status']}")
+            self.refresh_data()
+        except Exception as exc:
+            QMessageBox.warning(self, "Remote support failed", str(exc))
+
+    def export_inventory(self, file_type: str) -> None:
+        try:
+            if file_type == "csv":
+                path = Path.cwd() / "device-inventory.csv"
+                path.write_bytes(self.api.inventory_csv())
+            else:
+                path = Path.cwd() / "device-inventory.pdf"
+                path.write_bytes(self.api.inventory_pdf())
+            self._set_status(f"Exported {path.name}")
+            QMessageBox.information(self, "Inventory export", f"Saved {path}")
+        except Exception as exc:
+            QMessageBox.warning(self, "Inventory export failed", str(exc))
+
+    def _prepare_table(self, table: QTableWidget) -> None:
+        table.setAlternatingRowColors(True)
+        table.setSortingEnabled(True)
+
     def _fill_table(self, table: QTableWidget, rows: list[dict], keys: list[str]) -> None:
+        table.setSortingEnabled(False)
         table.setRowCount(len(rows))
         for row_index, row in enumerate(rows):
             for column_index, key in enumerate(keys):
                 value = row.get(key)
                 table.setItem(row_index, column_index, QTableWidgetItem("" if value is None else str(value)))
+        table.setSortingEnabled(True)
         table.resizeColumnsToContents()
+
+    def _set_status(self, message: str) -> None:
+        self.status_label.setText(message)
