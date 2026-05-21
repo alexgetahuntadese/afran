@@ -40,6 +40,7 @@ def _run_backend() -> None:
             host=settings.backend_host,
             port=settings.backend_port,
             log_level="warning",
+            log_config=None,
             access_log=False,
         )
         uvicorn.Server(config).run()
