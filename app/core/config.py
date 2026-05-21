@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="change-me-in-production", min_length=16)
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/smart_it"
+    database_url: str = "sqlite+aiosqlite:///./smart_it.db"
     redis_url: str = "redis://localhost:6379/0"
     scan_interval_seconds: int = 30
     trial_days: int = 14
