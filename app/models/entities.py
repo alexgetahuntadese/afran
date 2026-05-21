@@ -190,7 +190,7 @@ class ActivityLog(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     actor_user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     action: Mapped[str] = mapped_column(String(160), index=True)
     entity_type: Mapped[str | None] = mapped_column(String(80))
-    entity_id: Mapped[UUID | None] = mapped_column()
+    entity_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
     ip_address: Mapped[str | None] = mapped_column(String(64))
     details: Mapped[dict] = mapped_column(JSONB, default=dict)
 

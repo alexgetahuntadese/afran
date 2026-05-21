@@ -74,6 +74,8 @@ class MainWindow(QMainWindow):
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.Password)
         self.password.setPlaceholderText("Password")
+        self.subnet = QLineEdit()
+        self.subnet.setPlaceholderText("LAN subnet, for example 192.168.1.0/24")
         login = QPushButton("Sign in")
         login.setObjectName("PrimaryButton")
         login.clicked.connect(self.login)
@@ -81,7 +83,7 @@ class MainWindow(QMainWindow):
         bootstrap.clicked.connect(self.bootstrap)
         layout.addWidget(title)
         layout.addSpacing(16)
-        for widget in (self.organization, self.name, self.email, self.password, login, bootstrap):
+        for widget in (self.organization, self.name, self.email, self.password, self.subnet, login, bootstrap):
             layout.addWidget(widget)
         layout.addStretch()
         return view
@@ -137,6 +139,7 @@ class MainWindow(QMainWindow):
                 self.password.text(),
             )
             self._enter_app()
+            self.auto_scan()
         except Exception as exc:
             QMessageBox.warning(self, "Workspace setup failed", str(exc))
 
@@ -163,6 +166,17 @@ class MainWindow(QMainWindow):
             ["hostname", "ip_address", "mac_address", "vendor", "device_type", "status"],
         )
         self._fill_table(self.alert_table, alerts, ["severity", "title", "message", "status"])
+
+    def auto_scan(self) -> None:
+        try:
+            branches = self.api.branches()
+            if not branches:
+                return
+            summary = self.api.run_scan(branches[0]["id"], self.subnet.text() or None)
+            QMessageBox.information(self, "LAN scan complete", summary["message"])
+            self.refresh_data()
+        except Exception as exc:
+            QMessageBox.warning(self, "LAN scan failed", str(exc))
 
     def _fill_table(self, table: QTableWidget, rows: list[dict], keys: list[str]) -> None:
         table.setRowCount(len(rows))

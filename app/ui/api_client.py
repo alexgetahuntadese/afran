@@ -57,6 +57,18 @@ class ApiClient:
     def alerts(self) -> list[dict]:
         return self._get("/api/alerts")
 
+    def branches(self) -> list[dict]:
+        return self._get("/api/branches")
+
+    def run_scan(self, branch_id: str, subnet_cidr: str | None = None) -> dict:
+        with httpx.Client(base_url=self.session.base_url, timeout=90, headers=self.session.headers) as client:
+            response = client.post(
+                "/api/scans/run",
+                json={"branch_id": branch_id, "subnet_cidr": subnet_cidr},
+            )
+            response.raise_for_status()
+            return response.json()
+
     def roi_report(self) -> dict:
         return self._get("/api/subscriptions/trial/roi-report")
 
