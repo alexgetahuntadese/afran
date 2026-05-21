@@ -16,3 +16,8 @@ async def bootstrap(data: UserCreate, session: AsyncSession = Depends(get_sessio
 @router.post("/login", response_model=TokenResponse)
 async def login(data: LoginRequest, session: AsyncSession = Depends(get_session)) -> TokenResponse:
     return await AuthService(session).login(data.email, data.password)
+
+
+@router.post("/demo", response_model=TokenResponse)
+async def demo(session: AsyncSession = Depends(get_session)) -> TokenResponse:
+    return await AuthService(session).demo_workspace()

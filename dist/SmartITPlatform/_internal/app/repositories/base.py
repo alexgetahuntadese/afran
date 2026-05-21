@@ -16,7 +16,7 @@ class Repository(Generic[ModelT]):
         return await self.session.get(self.model, entity_id)
 
     async def list(self, stmt: Select | None = None) -> list[ModelT]:
-        result = await self.session.execute(stmt or select(self.model))
+        result = await self.session.execute(stmt if stmt is not None else select(self.model))
         return list(result.scalars().all())
 
     async def add(self, entity: ModelT) -> ModelT:

@@ -71,7 +71,7 @@ class AuthService:
         return self._token_for_user(user)
 
     async def demo_workspace(self) -> TokenResponse:
-        email = "demo@smartit.local"
+        email = "demo@smartit.example.com"
         password = "demo12345"
         result = await self.session.execute(select(User).where(User.email == email, User.is_active.is_(True)))
         user = result.scalar_one_or_none()
