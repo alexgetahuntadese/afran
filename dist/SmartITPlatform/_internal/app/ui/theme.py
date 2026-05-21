@@ -19,6 +19,14 @@ QPushButton {
 QPushButton:hover {
     background: #26313c;
 }
+QPushButton#NavButton {
+    text-align: left;
+    border: 0;
+}
+QPushButton#NavButton:checked {
+    background: #2f7df6;
+    color: white;
+}
 QPushButton#PrimaryButton {
     background: #2f7df6;
     color: white;
@@ -33,6 +41,7 @@ QLineEdit {
 }
 QTableWidget {
     background: #101418;
+    alternate-background-color: #131a20;
     gridline-color: #26313a;
     border: 1px solid #26313a;
     border-radius: 6px;
@@ -73,6 +82,14 @@ QPushButton {
 QPushButton:hover {
     background: #edf3fa;
 }
+QPushButton#NavButton {
+    text-align: left;
+    border: 0;
+}
+QPushButton#NavButton:checked {
+    background: #2563eb;
+    color: white;
+}
 QPushButton#PrimaryButton {
     background: #2563eb;
     color: white;
@@ -87,6 +104,7 @@ QLineEdit {
 }
 QTableWidget {
     background: #ffffff;
+    alternate-background-color: #f8fbfe;
     gridline-color: #dde4ec;
     border: 1px solid #dde4ec;
     border-radius: 6px;

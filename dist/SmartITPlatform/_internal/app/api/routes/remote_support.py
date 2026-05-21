@@ -1,15 +1,29 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_session
-from app.models import User
+from app.models import RemoteSession, User
 from app.remote_support.session_service import RemoteSupportService
 from app.schemas.remote_support import RemoteSessionCreate, RemoteSessionRead
 
 router = APIRouter(prefix="/remote-support", tags=["remote-support"])
+
+
+@router.get("/sessions", response_model=list[RemoteSessionRead])
+async def list_sessions(
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> list[RemoteSessionRead]:
+    result = await session.execute(
+        select(RemoteSession)
+        .where(RemoteSession.organization_id == user.organization_id)
+        .order_by(RemoteSession.created_at.desc())
+    )
+    return list(result.scalars().all())
 
 
 @router.post("/sessions", response_model=RemoteSessionRead)
