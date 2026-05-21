@@ -5,10 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import get_settings
+from app.core.database import initialize_database
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    await initialize_database()
     yield
 
 
