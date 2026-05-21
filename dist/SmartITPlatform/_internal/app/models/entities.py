@@ -1,8 +1,8 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import INET, JSONB
+from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, Uuid
+from sqlalchemy.dialects.postgresql import INET as PG_INET, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -17,6 +17,9 @@ from app.core.enums import (
     SubscriptionStatus,
 )
 from app.models.base import TimestampMixin, UUIDPrimaryKeyMixin
+
+IPAddress = String(64).with_variant(PG_INET(), "postgresql")
+JSONDict = JSON().with_variant(JSONB(), "postgresql")
 
 
 class Organization(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -49,7 +52,7 @@ class Role(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "roles"
 
     name: Mapped[str] = mapped_column(String(80), unique=True)
-    permissions: Mapped[dict] = mapped_column(JSONB, default=dict)
+    permissions: Mapped[dict] = mapped_column(JSONDict, default=dict)
 
 
 class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -74,7 +77,7 @@ class Device(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     organization_id: Mapped[UUID] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"))
     branch_id: Mapped[UUID] = mapped_column(ForeignKey("branches.id", ondelete="CASCADE"), index=True)
     hostname: Mapped[str | None] = mapped_column(String(255))
-    ip_address: Mapped[str] = mapped_column(INET, index=True)
+    ip_address: Mapped[str] = mapped_column(IPAddress, index=True)
     mac_address: Mapped[str | None] = mapped_column(String(32), index=True)
     vendor: Mapped[str | None] = mapped_column(String(160))
     operating_system: Mapped[str | None] = mapped_column(String(160))
@@ -87,7 +90,7 @@ class Device(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     uptime_seconds: Mapped[int | None] = mapped_column(Integer)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(Text)
-    metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    metadata_json: Mapped[dict] = mapped_column(JSONDict, default=dict)
 
     branch: Mapped["Branch"] = relationship(back_populates="devices")
     printers: Mapped[list["Printer"]] = relationship(back_populates="assigned_device")
@@ -103,7 +106,7 @@ class Printer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(255), index=True)
     model: Mapped[str | None] = mapped_column(String(160))
     driver_name: Mapped[str | None] = mapped_column(String(255))
-    ip_address: Mapped[str | None] = mapped_column(INET)
+    ip_address: Mapped[str | None] = mapped_column(IPAddress)
     share_name: Mapped[str | None] = mapped_column(String(255))
     department: Mapped[str | None] = mapped_column(String(160))
     floor: Mapped[str | None] = mapped_column(String(80))
@@ -113,7 +116,7 @@ class Printer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     toner_level: Mapped[int | None] = mapped_column(Integer)
     paper_status: Mapped[str | None] = mapped_column(String(80))
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    metadata_json: Mapped[dict] = mapped_column(JSONDict, default=dict)
 
     branch: Mapped["Branch"] = relationship(back_populates="printers")
     assigned_device: Mapped["Device | None"] = relationship(back_populates="printers")
@@ -133,7 +136,7 @@ class Alert(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     acknowledged_by: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    evidence: Mapped[dict] = mapped_column(JSONB, default=dict)
+    evidence: Mapped[dict] = mapped_column(JSONDict, default=dict)
 
     device: Mapped["Device | None"] = relationship(back_populates="alerts")
 
@@ -150,7 +153,7 @@ class Subscription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     current_period_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     device_limit: Mapped[int | None] = mapped_column(Integer)
-    feature_flags: Mapped[dict] = mapped_column(JSONB, default=dict)
+    feature_flags: Mapped[dict] = mapped_column(JSONDict, default=dict)
 
     organization: Mapped["Organization"] = relationship(back_populates="subscription")
 
@@ -180,7 +183,7 @@ class RemoteSession(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     max_duration_seconds: Mapped[int | None] = mapped_column(Integer)
     recording_path: Mapped[str | None] = mapped_column(String(500))
-    audit_events: Mapped[dict] = mapped_column(JSONB, default=dict)
+    audit_events: Mapped[dict] = mapped_column(JSONDict, default=dict)
 
 
 class ActivityLog(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -190,9 +193,9 @@ class ActivityLog(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     actor_user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     action: Mapped[str] = mapped_column(String(160), index=True)
     entity_type: Mapped[str | None] = mapped_column(String(80))
-    entity_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    entity_id: Mapped[UUID | None] = mapped_column(Uuid(as_uuid=True))
     ip_address: Mapped[str | None] = mapped_column(String(64))
-    details: Mapped[dict] = mapped_column(JSONB, default=dict)
+    details: Mapped[dict] = mapped_column(JSONDict, default=dict)
 
 
 class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -204,4 +207,4 @@ class Payment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     amount: Mapped[float] = mapped_column(Numeric(12, 2))
     currency: Mapped[str] = mapped_column(String(12), default="ETB")
     status: Mapped[str] = mapped_column(String(64), default="pending")
-    raw_payload: Mapped[dict] = mapped_column(JSONB, default=dict)
+    raw_payload: Mapped[dict] = mapped_column(JSONDict, default=dict)
