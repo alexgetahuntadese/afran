@@ -45,6 +45,14 @@ class ApiClient:
             self.session.token = payload["access_token"]
             self.session.organization_id = payload["organization_id"]
 
+    def demo(self) -> None:
+        with httpx.Client(base_url=self.session.base_url, timeout=30) as client:
+            response = client.post("/api/auth/demo")
+            response.raise_for_status()
+            payload = response.json()
+            self.session.token = payload["access_token"]
+            self.session.organization_id = payload["organization_id"]
+
     def dashboard(self) -> dict:
         return self._get("/api/dashboard/summary")
 
@@ -66,6 +74,18 @@ class ApiClient:
                 "/api/scans/run",
                 json={"branch_id": branch_id, "subnet_cidr": subnet_cidr},
             )
+            response.raise_for_status()
+            return response.json()
+
+    def sync_printers(self, branch_id: str) -> list[dict]:
+        with httpx.Client(base_url=self.session.base_url, timeout=60, headers=self.session.headers) as client:
+            response = client.post(f"/api/printers/sync/{branch_id}")
+            response.raise_for_status()
+            return response.json()
+
+    def restart_spooler(self) -> dict:
+        with httpx.Client(base_url=self.session.base_url, timeout=60, headers=self.session.headers) as client:
+            response = client.post("/api/printers/spooler/restart")
             response.raise_for_status()
             return response.json()
 
